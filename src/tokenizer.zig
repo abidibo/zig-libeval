@@ -2,6 +2,10 @@ const Operator = @import("operator.zig").Operator;
 const std = @import("std");
 const Regex = @import("regex").Regex;
 
+const TokenizerError = error{
+    InvalidToken,
+};
+
 pub const TokenType = enum { open_paren, close_paren, operator, operand };
 pub const Token = struct { type: TokenType, value: []const u8 };
 

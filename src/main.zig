@@ -10,7 +10,7 @@ pub fn main() !void {
     std.debug.print("INIT\n", .{});
 
     // Prints to stderr, ignoring potential errors.
-    const infix: []const u8 = "var1 && 45";
+    const infix: []const u8 = "-var1 && 45";
     const tokens: []Tokenizer.Token = try Tokenizer.tokenize(infix, Config.operators, allocator);
     defer allocator.free(tokens);
     std.debug.print("Tokens: {any}\n", .{tokens});
