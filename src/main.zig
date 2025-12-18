@@ -2,6 +2,7 @@ const std = @import("std");
 const ziglibeval = @import("ziglibeval");
 const Tokenizer = @import("tokenizer.zig");
 const Config = @import("config.zig").Config;
+const Evaluator = @import("evaluator.zig").Evaluator;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -10,10 +11,12 @@ pub fn main() !void {
     std.debug.print("INIT\n", .{});
 
     // Prints to stderr, ignoring potential errors.
-    const infix: []const u8 = "-var1 && 45";
-    const tokens: []Tokenizer.Token = try Tokenizer.tokenize(infix, Config.operators, allocator);
-    defer allocator.free(tokens);
-    std.debug.print("Tokens: {any}\n", .{tokens});
+    const infix: []const u8 = "var1 && 45";
+    var evaluator = Evaluator.init(allocator);
+    defer evaluator.deinit(allocator);
+
+    try evaluator.compile(allocator, infix);
+
     try ziglibeval.bufferedPrint();
 }
 
