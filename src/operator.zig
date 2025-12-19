@@ -1,3 +1,5 @@
+const std = @import("std");
+
 pub const OperatorType = enum {
     AND,
     OR,
@@ -57,5 +59,10 @@ pub const Operator = struct {
             .precedence = precedence,
             .symbol = symbol,
         };
+    }
+
+    pub fn comparePrecedence(self: *const Operator, other: *const Operator) i8 {
+        const order = std.math.order(self.precedence, other.precedence);
+        return @intFromEnum(order);
     }
 };
