@@ -31,6 +31,8 @@ pub const Evaluator = struct {
         const n = try ShuntingYard.infixToTree(allocator, tokens, Config.operators);
         defer n.destroy(allocator);
 
+        std.debug.print("Infix: {any}\n", .{n});
+
         _ = self;
     }
 };

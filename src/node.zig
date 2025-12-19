@@ -6,6 +6,7 @@ pub const OperandNode = struct {
     id: i16 = 0,
     operand: Operand,
     depth: i16 = 0,
+    parent: ?*Node = null, // Change undefined to null
 
     pub fn init(operand: Operand, depth: i16) OperandNode {
         cnt += 1;
@@ -18,6 +19,7 @@ pub const UnaryOperatorNode = struct {
     symbol: []const u8 = "",
     depth: i16 = 0,
     leftChild: *Node = undefined,
+    parent: ?*Node = null, // Change undefined to null
 
     pub fn init(symbol: []const u8, depth: i16, leftChild: *Node) UnaryOperatorNode {
         cnt += 1;
@@ -31,6 +33,7 @@ pub const BinaryOperatorNode = struct {
     depth: i16 = 0,
     leftChild: *Node = undefined,
     rightChild: *Node = undefined,
+    parent: ?*Node = null, // Change undefined to null
 
     pub fn init(symbol: []const u8, depth: i16, leftChild: *Node, rightChild: *Node) BinaryOperatorNode {
         cnt += 1;
@@ -53,9 +56,21 @@ pub const Node = union(enum) {
         }
     }
 
+    pub fn getDepth(self: Node) i16 {
+        switch (self) {
+            inline else => |impl| return impl.depth,
+        }
+    }
+
     pub fn getSymbol(self: Node) []const u8 {
         switch (self) {
             inline else => |impl| return impl.symbol,
+        }
+    }
+
+    pub fn setParent(self: *Node, p: *Node) void {
+        switch (self.*) {
+            inline else => |*impl| impl.parent = p,
         }
     }
 

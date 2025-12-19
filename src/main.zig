@@ -8,7 +8,7 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    std.debug.print("INIT\n", .{});
+    std.debug.print("EXPR: var1 && 45\n", .{});
 
     // Prints to stderr, ignoring potential errors.
     const infix: []const u8 = "var1 && 45";

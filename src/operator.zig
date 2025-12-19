@@ -15,6 +15,7 @@ pub const Operator = struct {
     operator_type: OperatorType,
     precedence: u8,
     symbol: []const u8 = "",
+    unary: bool = false,
 
     pub fn init(operatorType: OperatorType) Operator {
         var precedence: u8 = 1;
@@ -58,6 +59,7 @@ pub const Operator = struct {
             .operator_type = operatorType,
             .precedence = precedence,
             .symbol = symbol,
+            .unary = unary,
         };
     }
 
