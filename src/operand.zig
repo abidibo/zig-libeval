@@ -1,6 +1,5 @@
 const std = @import("std");
 const Tokenizer = @import("tokenizer.zig");
-const Regex = @import("regex").Regex;
 
 pub const OperandError = error{
     InvalidOperand,
@@ -13,24 +12,20 @@ pub const Operand = struct {
     value: ?f64,
 
     pub fn init(allocator: std.mem.Allocator, token: Tokenizer.Token) !Operand {
-        var literalRegex: Regex = try Regex.compile(allocator, "^[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+$");
-        var varRegex: Regex = try Regex.compile(allocator, "^[a-zA-Z][a-zA-Z0-9]*$");
-        defer {
-            literalRegex.deinit();
-            varRegex.deinit();
-        }
+        _ = allocator;
+        const first_char = token.value[0];
 
         if (std.mem.eql(u8, token.value, "true")) {
             return Operand{ .type = OperandType.literal, .value = 1.0 };
         } else if (std.mem.eql(u8, token.value, "false")) {
             return Operand{ .type = OperandType.literal, .value = 0.0 };
-        } else if (try literalRegex.find(token.value)) |_| {
-            return Operand{ .type = OperandType.literal, .value = std.fmt.parseFloat(f64, token.value) catch unreachable };
-        } else if (try varRegex.find(token.value)) |_| {
-            return Operand{ .type = OperandType.variable, .value = undefined };
+        } else if (std.ascii.isDigit(first_char) or (first_char == '.' and token.value.len > 1)) {
+            const value = try std.fmt.parseFloat(f64, token.value);
+            return Operand{ .type = OperandType.literal, .value = value };
+        } else if (std.ascii.isAlphabetic(first_char)) {
+            return Operand{ .type = OperandType.variable, .value = null };
         }
 
-        // else throw error
-        return error.InvalidOperand;
+        return OperandError.InvalidOperand;
     }
 };

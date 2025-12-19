@@ -1,91 +1,95 @@
-const Operator = @import("operator.zig").Operator;
 const std = @import("std");
-const Regex = @import("regex").Regex;
+const Operator = @import("operator.zig").Operator;
 
-const TokenizerError = error{
+pub const TokenizerError = error{
     InvalidToken,
+    EndOfStream,
 };
 
 pub const TokenType = enum { open_paren, close_paren, operator, operand };
 pub const Token = struct { type: TokenType, value: []const u8 };
 
-pub const Pattern = struct {
-    type: TokenType,
-    regex: Regex,
+fn isOperatorChar(c: u8) bool {
+    return c == '&' or c == '|' or c == '!' or c == '=' or c == '>' or c == '<';
+}
 
-    pub fn init(allocator: std.mem.Allocator, t: TokenType, regex_str: []const u8) !Pattern {
-        const compiled: Regex = try Regex.compile(allocator, regex_str);
-        return Pattern{ .type = t, .regex = compiled };
-    }
-
-    pub fn deinit(self: *Pattern) void {
-        self.regex.deinit();
-    }
-
-    pub fn match(self: Pattern, str: []const u8) !?[]const u8 {
-        // regex.find usually returns an optional Match object with a .slice field
-        if (try self.regex.find(str)) |m| {
-            return m.slice; // Return the actual matched text (e.g. "123" or "(")
+fn matchLongestOperator(cursor: usize, infix: []const u8, operators: []const Operator) ?[]const u8 {
+    var longest_match: ?[]const u8 = null;
+    for (operators) |op| {
+        if (std.mem.startsWith(u8, infix[cursor..], op.symbol)) {
+            if (longest_match == null or op.symbol.len > longest_match.?.len) {
+                longest_match = op.symbol;
+            }
         }
-        return null;
     }
-};
+    return longest_match;
+}
 
 pub fn tokenize(
     infix: []const u8,
     operators: []const Operator,
     allocator: std.mem.Allocator,
 ) ![]Token {
-
-    // first we construct the patterns used to extract the next token
-    var patterns = std.ArrayList(Pattern){};
-    defer {
-        for (patterns.items) |*p| p.deinit();
-        patterns.deinit(allocator);
-    }
-
-    // open paren pattern
-    try patterns.append(allocator, try Pattern.init(allocator, TokenType.open_paren, "^\\("));
-    // close paren pattern
-    try patterns.append(allocator, try Pattern.init(allocator, TokenType.close_paren, "^\\)"));
-    // operand pattern
-    try patterns.append(allocator, try Pattern.init(allocator, TokenType.operand, "^(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+|[a-zA-Z][a-zA-Z0-9]*)"));
-
-    for (operators) |op| {
-        try patterns.append(allocator, try Pattern.init(allocator, TokenType.operator, op.regex_str));
-    }
-
     var tokens = std.ArrayList(Token){};
-    errdefer tokens.deinit(allocator); // free only on error
-    var cursor: usize = 0;
+    errdefer tokens.deinit(allocator);
 
+    var cursor: usize = 0;
     while (cursor < infix.len) {
         const c = infix[cursor];
-        if (c == ' ' or c == '\t' or c == '\n' or c == '\r') {
-            cursor += 1;
-            continue;
-        }
 
-        var matched = false;
-
-        for (patterns.items) |p| {
-            // Capture the 'matched_text' returned by match()
-            if (try p.match(infix[cursor..])) |matched_text| {
-                const token = Token{ .type = p.type, .value = matched_text };
-                try tokens.append(allocator, token);
-                cursor += matched_text.len;
-                matched = true;
-                break;
-            }
-        }
-
-        // Safety: If no pattern matches, you are stuck in an infinite loop.
-        // You should handle invalid characters or at least break.
-        if (!matched) {
-            std.debug.print("Error: Unknown token at index {d}: {c}\n", .{ cursor, infix[cursor] });
-            return error.InvalidToken; // Or simply break/cursor++ to skip
+        switch (c) {
+            ' ', '\t', '\n', '\r' => {
+                cursor += 1;
+            },
+            '(' => {
+                try tokens.append(allocator, .{ .type = .open_paren, .value = infix[cursor .. cursor + 1] });
+                cursor += 1;
+            },
+            ')' => {
+                try tokens.append(allocator, .{ .type = .close_paren, .value = infix[cursor .. cursor + 1] });
+                cursor += 1;
+            },
+            '0'...'9' => {
+                const start = cursor;
+                var end = cursor + 1;
+                var has_dot = false;
+                while (end < infix.len) {
+                    const next_c = infix[end];
+                    if (std.ascii.isDigit(next_c)) {
+                        end += 1;
+                    } else if (next_c == '.' and !has_dot) {
+                        has_dot = true;
+                        end += 1;
+                    } else {
+                        break;
+                    }
+                }
+                try tokens.append(allocator, .{ .type = .operand, .value = infix[start..end] });
+                cursor = end;
+            },
+            'a'...'z', 'A'...'Z' => {
+                const start = cursor;
+                var end = cursor + 1;
+                while (end < infix.len and std.ascii.isAlphanumeric(infix[end])) {
+                    end += 1;
+                }
+                try tokens.append(allocator, .{ .type = .operand, .value = infix[start..end] });
+                cursor = end;
+            },
+            else => {
+                if (isOperatorChar(c)) {
+                    if (matchLongestOperator(cursor, infix, operators)) |op_symbol| {
+                        try tokens.append(allocator, .{ .type = .operator, .value = op_symbol });
+                        cursor += op_symbol.len;
+                    } else {
+                        return TokenizerError.InvalidToken;
+                    }
+                } else {
+                    return TokenizerError.InvalidToken;
+                }
+            },
         }
     }
 
-    return try tokens.toOwnedSlice(allocator);
+    return tokens.toOwnedSlice(allocator);
 }
