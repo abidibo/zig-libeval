@@ -1,13 +1,15 @@
+const std = @import("std");
+const Operand = @import("operand.zig").Operand;
 var cnt: i16 = 0;
 
 pub const OperandNode = struct {
     id: i16 = 0,
-    symbol: []const u8 = "",
+    operand: Operand,
     depth: i16 = 0,
 
-    pub fn init(symbol: []const u8, depth: i16) OperandNode {
+    pub fn init(operand: Operand, depth: i16) OperandNode {
         cnt += 1;
-        return OperandNode{ .id = cnt, .symbol = symbol, .depth = depth };
+        return OperandNode{ .id = cnt, .operand = operand, .depth = depth };
     }
 };
 
@@ -55,5 +57,27 @@ pub const Node = union(enum) {
         switch (self) {
             inline else => |impl| return impl.symbol,
         }
+    }
+
+    pub fn destroy(self: *Node, allocator: std.mem.Allocator) void {
+        // 1. Look at what kind of node this is
+        switch (self.*) {
+            // Operands have no children, nothing else to clean up inside
+            .operand => {},
+
+            // Unary operators have one child that must be destroyed first
+            .unaryOperator => |un| {
+                un.leftChild.destroy(allocator);
+            },
+
+            // Binary operators have two children that must be destroyed first
+            .binaryOperator => |bin| {
+                bin.leftChild.destroy(allocator);
+                bin.rightChild.destroy(allocator);
+            },
+        }
+
+        // 2. Finally, free the memory for the current node itself
+        allocator.destroy(self);
     }
 };

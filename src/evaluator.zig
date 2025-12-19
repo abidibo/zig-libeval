@@ -2,6 +2,7 @@ const std = @import("std");
 const Node = @import("node.zig").Node;
 const Tokenizer = @import("tokenizer.zig");
 const Config = @import("config.zig").Config;
+const ShuntingYard = @import("shuntingyard.zig");
 
 pub const Evaluator = struct {
     _deps: std.StringHashMap(std.ArrayList(*Node)),
@@ -26,6 +27,9 @@ pub const Evaluator = struct {
         defer allocator.free(tokens);
 
         std.debug.print("Tokens: {any}\n", .{tokens});
+
+        const n = try ShuntingYard.infixToTree(allocator, tokens, Config.operators);
+        defer n.destroy(allocator);
 
         _ = self;
     }

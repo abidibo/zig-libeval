@@ -1,6 +1,7 @@
 const Operator = @import("operator.zig").Operator;
 const OperatorType = @import("operator.zig").OperatorType;
 
+// just keep the operators here to allow further configuration
 pub const Config = struct {
     pub const operators: []const Operator = &.{
         Operator.init(OperatorType.AND),
